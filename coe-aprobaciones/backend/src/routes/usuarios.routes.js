@@ -4,7 +4,7 @@ import { crearUsuario, listarUsuarios, detalleUsuario, actualizarUsuario, elimin
 let routerUsuarios = Router();
 
 routerUsuarios.get('/usuarios', listarUsuarios);
-routerUsuarios.post('/usuarios', crearUsuario);
+routerUsuarios.post('/registro', crearUsuario);
 routerUsuarios.get('/usuarios/:id', detalleUsuario);
 routerUsuarios.put('/usuarios/:id', actualizarUsuario);
 routerUsuarios.delete('/usuarios/:id', eliminarUsuario);

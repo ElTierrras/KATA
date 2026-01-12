@@ -6,10 +6,10 @@ export let listarUsuarios = async (req, res)=> {
 }
 
 export let crearUsuario = async (req, res) => {
-  const { nombre, correo, rol } = req.body;
+  const { nombre, correo, rol, contrasena } = req.body;
   const result = await pool.query(
-    'INSERT INTO usuarios (nombre, correo, rol) VALUES ($1, $2, $3) RETURNING *',
-    [nombre, correo, rol]
+    'INSERT INTO usuarios (nombre, correo, rol, contrasena) VALUES ($1, $2, $3, $4) RETURNING *',
+    [nombre, correo, rol, contrasena]
   );
   res.json(result.rows[0]);
 };

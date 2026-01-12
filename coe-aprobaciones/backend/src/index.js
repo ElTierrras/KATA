@@ -3,6 +3,7 @@ import routerUsuarios from './routes/usuarios.routes.js';
 import routersolicitudes from './routes/solicitudes.routes.js';
 import routerHistorial from './routes/historial.routes.js';
 import routerTipos from './routes/tipo.routes.js';
+import routernotificaciones from './routes/notificaciones.routes.js';
 
 const app = express();
 app.use(express.json());
@@ -11,6 +12,7 @@ app.use(routerUsuarios);
 app.use(routersolicitudes);
 app.use(routerHistorial);
 app.use(routerTipos);
+app.use(routernotificaciones);
 
 
 app.listen(8080, () => {

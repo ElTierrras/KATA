@@ -3,6 +3,7 @@ CREATE TABLE usuarios (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nombre VARCHAR(120) NOT NULL,
   correo VARCHAR(160) UNIQUE NOT NULL,
+  contrasena VARCHAR(255) NOT NULL,
   rol VARCHAR(40) NOT NULL, -- solicitante, responsable, admin
   creado_en TIMESTAMP NOT NULL DEFAULT NOW()
 );

@@ -5,6 +5,18 @@ export let listarUsuarios = async (req, res)=> {
   res.json(result.rows);
 }
 
+export let iniciarUsuario = async (req, res) => {
+  const { correo, contrasena } = req.body;
+  const result = await pool.query(
+    'SELECT * FROM usuarios WHERE correo = $1 AND contrasena = $2',
+    [correo, contrasena]
+  );
+  if (result.rows.length === 0) {
+    return res.status(404).json({ message: 'Usuario no encontrado o credenciales incorrectas' });
+  }
+  res.json(result.rows[0]);
+};
+
 export let crearUsuario = async (req, res) => {
   const { nombre, correo, rol, contrasena } = req.body;
   const result = await pool.query(

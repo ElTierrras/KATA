@@ -11,7 +11,7 @@ import {
 
 let routerSolicitudes = Router();
 
-routerSolicitudes.post('/solicitudes', crearSolicitud);
+routerSolicitudes.post('/crear-solicitud', crearSolicitud);
 routerSolicitudes.get('/solicitudes', listarSolicitudes);
 routerSolicitudes.get('/solicitudes/:id', detalleSolicitud);
 routerSolicitudes.put('/solicitudes/:id/aprobar', aprobarSolicitud);

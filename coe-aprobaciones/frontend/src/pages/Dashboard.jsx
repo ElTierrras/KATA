@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Plus, Eye } from 'lucide-react';
+import { LogOut, Plus, Eye, InboxIcon, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore.js';
 import { useSolicitudStore } from '../store/useSolicitudStore.js';
 import Badge from '../components/Badge.jsx';
@@ -45,6 +45,13 @@ export default function Dashboard() {
     return solicitud.estado === filter;
   });
 
+  // Solicitudes pendientes que requieren mi aprobación
+  const solicitudesPendientes = solicitudes.filter(
+    (solicitud) => 
+      solicitud.estado === 'pendiente' && 
+      solicitud.responsable_id === usuario?.id
+  );
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
@@ -70,6 +77,57 @@ export default function Dashboard() {
         {error && (
           <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
             {error}
+          </div>
+        )}
+
+        {/* Bandeja de Entrada - Solicitudes Pendientes */}
+        {solicitudesPendientes.length > 0 && (
+          <div className="mb-8 bg-amber-50 border-2 border-amber-200 rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle size={24} className="text-amber-600" />
+              <h2 className="text-xl font-bold text-amber-900">📬 Bandeja de Entrada</h2>
+              <span className="ml-auto bg-amber-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                {solicitudesPendientes.length} pendiente{solicitudesPendientes.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            
+            <p className="text-amber-800 mb-4">
+              Tienes {solicitudesPendientes.length} solicitud{solicitudesPendientes.length !== 1 ? 'es' : ''} pendiente{solicitudesPendientes.length !== 1 ? 's' : ''} de aprobación:
+            </p>
+            
+            <div className="space-y-3">
+              {solicitudesPendientes.map((solicitud) => (
+                <div
+                  key={solicitud.id}
+                  className="bg-white p-4 rounded-lg border border-amber-300 hover:shadow-md transition cursor-pointer"
+                  onClick={() => handleVerDetalle(solicitud.id)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">
+                        {solicitud.titulo}
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Solicitante: <strong>{solicitud.solicitante?.nombre || 'N/A'}</strong>
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {new Date(solicitud.fecha_creacion).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <button
+                      className="ml-4 flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition whitespace-nowrap"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleVerDetalle(solicitud.id);
+                      }}
+                    >
+                      <Eye size={18} />
+                      Revisar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -103,6 +161,9 @@ export default function Dashboard() {
 
         {/* Solicitudes Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="bg-gray-50 border-b px-6 py-4">
+            <h2 className="text-lg font-bold text-gray-900">📋 Todas mis solicitudes</h2>
+          </div>
           {loading ? (
             <div className="p-8 text-center text-gray-600">
               Cargando solicitudes...
@@ -116,16 +177,16 @@ export default function Dashboard() {
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    ID
+                    Título
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Tipo
+                    Solicitante
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Responsable
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
                     Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Monto
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
                     Fecha
@@ -138,19 +199,19 @@ export default function Dashboard() {
               <tbody className="divide-y">
                 {solicitudesFiltradas.map((solicitud) => (
                   <tr key={solicitud.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {solicitud.id.slice(0, 8)}...
+                    <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                      {solicitud.titulo}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {solicitud.tipo_solicitud}
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {solicitud.solicitante?.nombre || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {solicitud.responsable?.nombre || 'N/A'}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <Badge status={solicitud.estado} />
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      ${solicitud.monto?.toLocaleString() || '0'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-6 py-4 text-sm text-gray-600">
                       {new Date(solicitud.fecha_creacion).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-sm">

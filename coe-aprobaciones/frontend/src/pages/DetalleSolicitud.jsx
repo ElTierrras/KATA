@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, X, MessageSquare } from 'lucide-react';
 import { useSolicitudStore } from '../store/useSolicitudStore.js';
 import { useAuthStore } from '../store/useAuthStore.js';
+import { useToastStore } from '../store/useToastStore.js';
 import Badge from '../components/Badge.jsx';
 
 export default function DetalleSolicitud() {
@@ -10,6 +11,7 @@ export default function DetalleSolicitud() {
   const navigate = useNavigate();
   const { solicitudActual, obtenerSolicitud, aprobarSolicitud, rechazarSolicitud, loading, error } = useSolicitudStore();
   const { usuario } = useAuthStore();
+  const { success, error: showError } = useToastStore();
   
   const [comentario, setComentario] = useState('');
   const [motivo, setMotivo] = useState('');
@@ -44,24 +46,25 @@ export default function DetalleSolicitud() {
   const handleAprobar = async (e) => {
     e.preventDefault();
     if (!comentario.trim()) {
-      alert('Por favor, agrega un comentario');
+      showError('Por favor, agrega un comentario');
       return;
     }
 
     setEnviando(true);
     try {
       console.log('✅ Aprobando solicitud:', id);
-      await aprobarSolicitud(id, comentario);
+      await aprobarSolicitud(id, comentario, usuario.id);
       
       // Agregar al historial local
       agregarAlHistorial('aprobada', comentario);
       
       setComentario('');
       setAccion(null);
-      alert('Solicitud aprobada correctamente');
+      success('Solicitud aprobada correctamente');
+      setTimeout(() => navigate('/dashboard'), 1500);
     } catch (error) {
       console.error('Error aprobando:', error);
-      alert('Error al aprobar: ' + error.message);
+      showError('Error al aprobar: ' + error.message);
     } finally {
       setEnviando(false);
     }
@@ -70,24 +73,25 @@ export default function DetalleSolicitud() {
   const handleRechazar = async (e) => {
     e.preventDefault();
     if (!motivo.trim()) {
-      alert('Por favor, proporciona un motivo del rechazo');
+      showError('Por favor, proporciona un motivo del rechazo');
       return;
     }
 
     setEnviando(true);
     try {
       console.log('❌ Rechazando solicitud:', id);
-      await rechazarSolicitud(id, motivo);
+      await rechazarSolicitud(id, motivo, usuario.id);
       
       // Agregar al historial local
       agregarAlHistorial('rechazada', motivo);
       
       setMotivo('');
       setAccion(null);
-      alert('Solicitud rechazada correctamente');
+      success('Solicitud rechazada correctamente');
+      setTimeout(() => navigate('/dashboard'), 1500);
     } catch (error) {
       console.error('Error rechazando:', error);
-      alert('Error al rechazar: ' + error.message);
+      showError('Error al rechazar: ' + error.message);
     } finally {
       setEnviando(false);
     }
@@ -148,6 +152,7 @@ export default function DetalleSolicitud() {
   }
 
   const puedeAprobar = solicitudActual.estado === 'pendiente' && 
+                       solicitudActual.responsable_id === usuario?.id &&
                        (usuario?.rol === 'responsable' || usuario?.rol === 'admin');
 
   return (
@@ -173,7 +178,7 @@ export default function DetalleSolicitud() {
           <div className="flex justify-between items-start mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
-                {solicitudActual.titulo || solicitudActual.tipo_solicitud}
+                {solicitudActual.titulo}
               </h2>
               <p className="text-gray-600 mt-2">
                 ID: {solicitudActual.id}
@@ -182,30 +187,41 @@ export default function DetalleSolicitud() {
             <Badge status={solicitudActual.estado} />
           </div>
 
-          <div className="grid grid-cols-2 gap-6 border-t pt-6">
-            <div>
-              <p className="text-gray-600 text-sm">Tipo de Solicitud</p>
-              <p className="text-gray-900 font-semibold">
-                {solicitudActual.tipo_solicitud}
-              </p>
+          <div className="border-t pt-6 space-y-4">
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="text-gray-600 text-sm">Solicitante</p>
+                <p className="text-gray-900 font-semibold">
+                  {solicitudActual.solicitante?.nombre || 'N/A'}
+                </p>
+                <p className="text-gray-600 text-xs mt-1">
+                  {solicitudActual.solicitante?.correo || ''}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Responsable</p>
+                <p className="text-gray-900 font-semibold">
+                  {solicitudActual.responsable?.nombre || 'N/A'}
+                </p>
+                <p className="text-gray-600 text-xs mt-1">
+                  {solicitudActual.responsable?.correo || ''}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-gray-600 text-sm">Monto</p>
-              <p className="text-gray-900 font-semibold">
-                ${solicitudActual.monto?.toLocaleString() || '0'}
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-600 text-sm">Solicitante</p>
-              <p className="text-gray-900 font-semibold">
-                {solicitudActual.nombre_solicitante || 'N/A'}
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-600 text-sm">Fecha de Creación</p>
-              <p className="text-gray-900 font-semibold">
-                {new Date(solicitudActual.fecha_creacion).toLocaleDateString()}
-              </p>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="text-gray-600 text-sm">Tipo de Solicitud</p>
+                <p className="text-gray-900 font-semibold">
+                  {solicitudActual.tipo_nombre || solicitudActual.tipo || 'N/A'}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Fecha de Creación</p>
+                <p className="text-gray-900 font-semibold">
+                  {new Date(solicitudActual.fecha_creacion).toLocaleDateString()}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -219,10 +235,35 @@ export default function DetalleSolicitud() {
           )}
         </div>
 
+        {/* Información si NO puede aprobar */}
+        {!puedeAprobar && solicitudActual.estado === 'pendiente' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+            <p className="text-blue-900">
+              💡 Esta solicitud está pendiente y solo <strong>{solicitudActual.responsable?.nombre}</strong> puede aprobarla o rechazarla.
+            </p>
+          </div>
+        )}
+
+        {/* Mensaje cuando la solicitud ya fue procesada */}
+        {solicitudActual.estado !== 'pendiente' && (
+          <div className={`rounded-lg p-6 mb-6 ${
+            solicitudActual.estado === 'aprobada' 
+              ? 'bg-green-50 border border-green-200' 
+              : 'bg-red-50 border border-red-200'
+          }`}>
+            <p className={solicitudActual.estado === 'aprobada' ? 'text-green-900' : 'text-red-900'}>
+              {solicitudActual.estado === 'aprobada' 
+                ? '✅ Esta solicitud ha sido aprobada.' 
+                : '❌ Esta solicitud ha sido rechazada.'}
+            </p>
+          </div>
+        )}
+
         {/* Acciones (si es aprobador y está pendiente) */}
         {puedeAprobar && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Acciones</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">⚠️ Acciones - Solicitud Pendiente de Aprobación</h3>
+            <p className="text-gray-600 mb-4">Como responsable asignado, puedes aprobar o rechazar esta solicitud.</p>
             
             {accion === null && (
               <div className="flex gap-4">

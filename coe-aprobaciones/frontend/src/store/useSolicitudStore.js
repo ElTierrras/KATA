@@ -75,11 +75,11 @@ export const useSolicitudStore = create((set) => ({
     }
   },
 
-  aprobarSolicitud: async (id, comentario) => {
+  aprobarSolicitud: async (id, comentario, usuario_id) => {
     console.log('✅ Aprobando solicitud:', id);
     set({ loading: true, error: null });
     try {
-      const data = await solicitudesService.aprobar(id, comentario);
+      const data = await solicitudesService.aprobar(id, comentario, usuario_id);
       console.log('✅ Solicitud aprobada:', data);
       set((state) => ({
         solicitudes: state.solicitudes.map((s) => s.id === id ? data : s),
@@ -94,11 +94,11 @@ export const useSolicitudStore = create((set) => ({
     }
   },
 
-  rechazarSolicitud: async (id, motivo) => {
+  rechazarSolicitud: async (id, motivo, usuario_id) => {
     console.log('❌ Rechazando solicitud:', id);
     set({ loading: true, error: null });
     try {
-      const data = await solicitudesService.rechazar(id, motivo);
+      const data = await solicitudesService.rechazar(id, motivo, usuario_id);
       console.log('❌ Solicitud rechazada:', data);
       set((state) => ({
         solicitudes: state.solicitudes.map((s) => s.id === id ? data : s),

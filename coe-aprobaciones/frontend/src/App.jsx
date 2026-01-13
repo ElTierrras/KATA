@@ -5,10 +5,12 @@ import Dashboard from './pages/Dashboard.jsx';
 import DetalleSolicitud from './pages/DetalleSolicitud.jsx';
 import CrearSolicitud from './pages/CrearSolicitud.jsx';
 import Notificaciones from './pages/Notificaciones.jsx';
+import ToastContainer from './components/ToastContainer.jsx';
 
 export default function App() {
   return (
     <Router>
+      <ToastContainer />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />

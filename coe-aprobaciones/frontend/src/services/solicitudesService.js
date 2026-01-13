@@ -34,15 +34,15 @@ export const solicitudesService = {
   },
 
   // Aprobar solicitud con comentario
-  aprobar: (id, comentario) => {
+  aprobar: (id, comentario, usuario_id) => {
     console.log('✅ Llamando: aprobar solicitud:', id);
-    return api.put(`/solicitudes/${id}/aprobar`, { comentario });
+    return api.put(`/solicitudes/${id}/aprobar`, { comentario, usuario_id });
   },
 
   // Rechazar solicitud con motivo
-  rechazar: (id, motivo) => {
+  rechazar: (id, motivo_rechazo, usuario_id) => {
     console.log('❌ Llamando: rechazar solicitud:', id);
-    return api.put(`/solicitudes/${id}/rechazar`, { motivo_rechazo: motivo });
+    return api.put(`/solicitudes/${id}/rechazar`, { motivo_rechazo, usuario_id });
   },
 
   // Obtener historial de la solicitud

@@ -35,6 +35,12 @@ export const Dashboard = () => {
           <div className="flex items-center gap-4">
             {user?.id && <NotificationBell usuarioId={user.id} />}
             <button
+              onClick={() => navigate('/notificaciones')}
+              className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200"
+            >
+              Bandeja
+            </button>
+            <button
               onClick={() => navigate('/crear-solicitud')}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
             >

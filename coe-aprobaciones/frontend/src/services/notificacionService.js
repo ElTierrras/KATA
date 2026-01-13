@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = "http://18.231.198.32:8080"
 
 export const enviarNotificacion = async (notificacionData) => {
   try {

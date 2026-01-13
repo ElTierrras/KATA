@@ -24,20 +24,8 @@ import pool from './db.js';
 
 const app = express();
 
-// ✅ CORS Configuration - ANTES de las rutas
-const corsOptions = {
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://127.0.0.1:5173',
-  ],
-  credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-};
-
-app.use(cors(corsOptions));
+// ✅ CORS Configuration - SIN RESTRICCIONES
+app.use(cors());
 app.use(express.json());
 
 // ✅ Rutas
@@ -48,7 +36,6 @@ app.use(routerTipos);
 app.use(routerNotificaciones);
 
 // ✅ Health check
-
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
@@ -63,6 +50,7 @@ const PORT = process.env.PORT || 8080;
 
 console.log(`📍 Puerto configurado: ${PORT}`);
 console.log(`📍 Variables de entorno cargadas: NODE_ENV=${process.env.NODE_ENV}`);
+console.log(`⚠️  CORS: Sin restricciones (permiso a todos los orígenes)`);
 
 // Servidor
 const server = app.listen(PORT, () => {

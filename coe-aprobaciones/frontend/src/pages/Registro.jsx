@@ -1,20 +1,19 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuthStore } from '../store/useAuthStore';
-import { Mail, Lock, User, UserPlus } from 'lucide-react';
+import { UserPlus, Mail, Lock, User } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore.js';
 
-export const Registro = () => {
-  const navigate = useNavigate();
-  const { setUser } = useAuthStore();
+export default function Registro() {
   const [formData, setFormData] = useState({
-    nombre_usuario: '',
+    nombre: '',
     correo: '',
-    contraseña: '',
-    confirmacion_contraseña: '',
+    contrasena: '',
+    confirmContrasena: '',
+    rol: 'solicitante',
   });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const { registro, loading } = useAuthStore();
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -27,60 +26,40 @@ export const Registro = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
 
     // Validaciones
-    if (formData.contraseña.length < 6) {
+    if (!formData.nombre.trim()) {
+      setError('El nombre es requerido');
+      return;
+    }
+    if (!formData.correo.trim()) {
+      setError('El correo es requerido');
+      return;
+    }
+    if (formData.contrasena.length < 6) {
       setError('La contraseña debe tener al menos 6 caracteres');
       return;
     }
-
-    if (formData.contraseña !== formData.confirmacion_contraseña) {
+    if (formData.contrasena !== formData.confirmContrasena) {
       setError('Las contraseñas no coinciden');
       return;
     }
 
-    setLoading(true);
-
     try {
-      // TODO: Reemplazar con llamada real a tu API backend
-      // const response = await fetch('/api/auth/register', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     nombre_usuario: formData.nombre_usuario,
-      //     correo: formData.correo,
-      //     contraseña: formData.contraseña,
-      //   }),
-      // });
-      // const data = await response.json();
-
-      // Simulación temporal
-      const userData = {
-        id: Math.floor(Math.random() * 10000),
-        nombre: formData.nombre_usuario,
-        correo: formData.correo,
-      };
-
-      setSuccess('¡Registro exitoso! Iniciando sesión...');
-      setTimeout(() => {
-        setUser(userData);
-        navigate('/dashboard');
-      }, 1500);
+      await registro(formData.nombre, formData.correo, formData.contrasena, formData.rol);
+      navigate('/dashboard');
     } catch (err) {
-      setError('Error al registrarse. Intenta nuevamente.');
+      setError(err.message || 'Error al registrarse. Intenta de nuevo.');
       console.error('Error de registro:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
         <div className="flex justify-center mb-6">
-          <div className="p-3 bg-green-100 rounded-full">
-            <UserPlus size={32} className="text-green-600" />
+          <div className="p-3 bg-blue-100 rounded-full">
+            <UserPlus size={32} className="text-blue-600" />
           </div>
         </div>
 
@@ -93,28 +72,22 @@ export const Registro = () => {
           </div>
         )}
 
-        {success && (
-          <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
-            {success}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="nombre_usuario" className="block text-sm font-medium text-gray-700 mb-2">
-              Nombre de Usuario
+            <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-2">
+              Nombre Completo
             </label>
             <div className="relative">
               <User size={20} className="absolute left-3 top-3 text-gray-400" />
               <input
                 type="text"
-                id="nombre_usuario"
-                name="nombre_usuario"
-                value={formData.nombre_usuario}
+                id="nombre"
+                name="nombre"
+                value={formData.nombre}
                 onChange={handleChange}
                 required
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="tu_usuario"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Tu nombre completo"
               />
             </div>
           </div>
@@ -132,46 +105,45 @@ export const Registro = () => {
                 value={formData.correo}
                 onChange={handleChange}
                 required
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="tu@email.com"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="contraseña" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="contrasena" className="block text-sm font-medium text-gray-700 mb-2">
               Contraseña
             </label>
             <div className="relative">
               <Lock size={20} className="absolute left-3 top-3 text-gray-400" />
               <input
                 type="password"
-                id="contraseña"
-                name="contraseña"
-                value={formData.contraseña}
+                id="contrasena"
+                name="contrasena"
+                value={formData.contrasena}
                 onChange={handleChange}
                 required
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="••••••••"
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">Mínimo 6 caracteres</p>
           </div>
 
           <div>
-            <label htmlFor="confirmacion_contraseña" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="confirmContrasena" className="block text-sm font-medium text-gray-700 mb-2">
               Confirmar Contraseña
             </label>
             <div className="relative">
               <Lock size={20} className="absolute left-3 top-3 text-gray-400" />
               <input
                 type="password"
-                id="confirmacion_contraseña"
-                name="confirmacion_contraseña"
-                value={formData.confirmacion_contraseña}
+                id="confirmContrasena"
+                name="confirmContrasena"
+                value={formData.confirmContrasena}
                 onChange={handleChange}
                 required
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="••••••••"
               />
             </div>
@@ -180,16 +152,16 @@ export const Registro = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 text-white font-semibold py-2 rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+            className="w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
           >
-            {loading ? 'Registrando...' : 'Registrarse'}
+            {loading ? 'Registrando...' : 'Crear Cuenta'}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600 text-sm">
             ¿Ya tienes cuenta?{' '}
-            <Link to="/login" className="text-green-600 font-semibold hover:underline">
+            <Link to="/login" className="text-blue-600 font-semibold hover:underline">
               Inicia sesión aquí
             </Link>
           </p>
@@ -197,6 +169,4 @@ export const Registro = () => {
       </div>
     </div>
   );
-};
-
-export default Registro;
+}

@@ -1,230 +1,370 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSolicitudStore } from '../store/useSolicitudStore';
-import { useAuthStore } from '../store/useAuthStore';
-import { Badge } from '../components/Badge';
-import { getHistorialSolicitud } from '../services/historialService';
-import { MessageSquare, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Check, X, MessageSquare } from 'lucide-react';
+import { useSolicitudStore } from '../store/useSolicitudStore.js';
+import { useAuthStore } from '../store/useAuthStore.js';
+import Badge from '../components/Badge.jsx';
 
-export const DetalleSolicitud = () => {
+export default function DetalleSolicitud() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const { fetchDetalleSolicitud, aprobarSolicitud, rechazarSolicitud, agregarComentario } =
-    useSolicitudStore();
-
-  const [solicitud, setSolicitud] = useState(null);
-  const [historial, setHistorial] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { solicitudActual, obtenerSolicitud, aprobarSolicitud, rechazarSolicitud, loading, error } = useSolicitudStore();
+  const { usuario } = useAuthStore();
+  
   const [comentario, setComentario] = useState('');
-  const [motivoRechazo, setMotivoRechazo] = useState('');
-  const [mostrarModalRechazo, setMostrarModalRechazo] = useState(false);
+  const [motivo, setMotivo] = useState('');
+  const [accion, setAccion] = useState(null); // 'aprobar', 'rechazar', null
+  const [enviando, setEnviando] = useState(false);
+  const [historial, setHistorial] = useState([]);
 
+  // Cargar solicitud y historial al montar
   useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        const [solicitudData, historialData] = await Promise.all([
-          fetchDetalleSolicitud(id),
-          getHistorialSolicitud(id),
-        ]);
-        setSolicitud(solicitudData);
-        setHistorial(historialData);
-      } catch (error) {
-        console.error('Error cargando datos:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    cargarDatos();
-  }, [id]);
+    if (id) {
+      console.log('📄 Cargando solicitud:', id);
+      obtenerSolicitud(id).catch((err) => {
+        console.error('Error cargando solicitud:', err);
+      });
+      
+      // Cargar historial (temporal - después lo conectaremos con el backend)
+      cargarHistorial(id);
+    }
+  }, [id, obtenerSolicitud]);
 
-  const handleAprobar = async () => {
+  const cargarHistorial = async (solicitudId) => {
     try {
-      await aprobarSolicitud(id);
-      setSolicitud((prev) => ({ ...prev, estado: 'aprobada' }));
+      // TODO: Reemplazar con llamada real cuando se implemente el servicio de historial
+      console.log('📜 Cargando historial de:', solicitudId);
+      // const data = await historialService.obtenerPorSolicitud(solicitudId);
+      // setHistorial(data);
+    } catch (error) {
+      console.error('Error cargando historial:', error);
+    }
+  };
+
+  const handleAprobar = async (e) => {
+    e.preventDefault();
+    if (!comentario.trim()) {
+      alert('Por favor, agrega un comentario');
+      return;
+    }
+
+    setEnviando(true);
+    try {
+      console.log('✅ Aprobando solicitud:', id);
+      await aprobarSolicitud(id, comentario);
+      
+      // Agregar al historial local
+      agregarAlHistorial('aprobada', comentario);
+      
+      setComentario('');
+      setAccion(null);
+      alert('Solicitud aprobada correctamente');
     } catch (error) {
       console.error('Error aprobando:', error);
+      alert('Error al aprobar: ' + error.message);
+    } finally {
+      setEnviando(false);
     }
   };
 
-  const handleRechazar = async () => {
+  const handleRechazar = async (e) => {
+    e.preventDefault();
+    if (!motivo.trim()) {
+      alert('Por favor, proporciona un motivo del rechazo');
+      return;
+    }
+
+    setEnviando(true);
     try {
-      await rechazarSolicitud(id, motivoRechazo);
-      setSolicitud((prev) => ({ ...prev, estado: 'rechazada' }));
-      setMostrarModalRechazo(false);
-      setMotivoRechazo('');
+      console.log('❌ Rechazando solicitud:', id);
+      await rechazarSolicitud(id, motivo);
+      
+      // Agregar al historial local
+      agregarAlHistorial('rechazada', motivo);
+      
+      setMotivo('');
+      setAccion(null);
+      alert('Solicitud rechazada correctamente');
     } catch (error) {
       console.error('Error rechazando:', error);
+      alert('Error al rechazar: ' + error.message);
+    } finally {
+      setEnviando(false);
     }
   };
 
-  const handleComentario = async (e) => {
-    e.preventDefault();
-    try {
-      await agregarComentario(id, comentario, user?.id);
-      setComentario('');
-    } catch (error) {
-      console.error('Error agregando comentario:', error);
-    }
+  const agregarAlHistorial = (estado, comentarioTexto) => {
+    const nuevoRegistro = {
+      id: Date.now(),
+      estado,
+      fecha: new Date().toISOString(),
+      usuario: usuario?.nombre || 'Usuario',
+      comentario: comentarioTexto,
+    };
+    setHistorial((prev) => [nuevoRegistro, ...prev]);
   };
 
-  if (loading) return <div className="p-8 text-center">Cargando...</div>;
-  if (!solicitud) return <div className="p-8 text-center text-red-600">Solicitud no encontrada</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 text-lg">Cargando solicitud...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const esAprobador = user?.rol === 'responsable' || user?.rol === 'admin';
-  const puedeAprobar = esAprobador && solicitud.estado === 'pendiente';
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="bg-red-100 text-red-700 p-6 rounded-lg">
+          <p className="font-semibold">Error al cargar la solicitud</p>
+          <p className="text-sm mt-2">{error}</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+          >
+            Volver al Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!solicitudActual) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 text-lg">Solicitud no encontrada</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Volver al Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const puedeAprobar = solicitudActual.estado === 'pendiente' && 
+                       (usuario?.rol === 'responsable' || usuario?.rol === 'admin');
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex justify-between items-start mb-4">
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <header className="bg-white shadow">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4"
+          >
+            <ArrowLeft size={20} />
+            Volver
+          </button>
+          <h1 className="text-3xl font-bold text-gray-900">Detalle de Solicitud</h1>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Información General */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <div className="flex justify-between items-start mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{solicitud.titulo}</h1>
-              <p className="text-gray-600 mt-2">{solicitud.descripcion}</p>
+              <h2 className="text-2xl font-bold text-gray-900">
+                {solicitudActual.titulo || solicitudActual.tipo_solicitud}
+              </h2>
+              <p className="text-gray-600 mt-2">
+                ID: {solicitudActual.id}
+              </p>
             </div>
-            <Badge estado={solicitud.estado} />
+            <Badge status={solicitudActual.estado} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-2 gap-6 border-t pt-6">
             <div>
-              <span className="font-semibold text-gray-700">Solicitante:</span>
-              <p className="text-gray-600">{solicitud.solicitante_id}</p>
+              <p className="text-gray-600 text-sm">Tipo de Solicitud</p>
+              <p className="text-gray-900 font-semibold">
+                {solicitudActual.tipo_solicitud}
+              </p>
             </div>
             <div>
-              <span className="font-semibold text-gray-700">Responsable:</span>
-              <p className="text-gray-600">{solicitud.responsable_id}</p>
+              <p className="text-gray-600 text-sm">Monto</p>
+              <p className="text-gray-900 font-semibold">
+                ${solicitudActual.monto?.toLocaleString() || '0'}
+              </p>
             </div>
             <div>
-              <span className="font-semibold text-gray-700">Fecha Creación:</span>
-              <p className="text-gray-600">{new Date(solicitud.fecha_creacion).toLocaleString()}</p>
+              <p className="text-gray-600 text-sm">Solicitante</p>
+              <p className="text-gray-900 font-semibold">
+                {solicitudActual.nombre_solicitante || 'N/A'}
+              </p>
             </div>
-            {solicitud.estado !== 'pendiente' && (
-              <div>
-                <span className="font-semibold text-gray-700">Fecha {solicitud.estado}:</span>
-                <p className="text-gray-600">
-                  {new Date(
-                    solicitud.estado === 'aprobada'
-                      ? solicitud.fecha_aprobacion
-                      : solicitud.fecha_rechazo
-                  ).toLocaleString()}
-                </p>
-              </div>
-            )}
+            <div>
+              <p className="text-gray-600 text-sm">Fecha de Creación</p>
+              <p className="text-gray-900 font-semibold">
+                {new Date(solicitudActual.fecha_creacion).toLocaleDateString()}
+              </p>
+            </div>
           </div>
 
-          {solicitud.motivo_rechazo && (
-            <div className="mt-4 p-3 bg-red-100 border border-red-400 rounded">
-              <p className="text-red-800">
-                <span className="font-semibold">Motivo del rechazo:</span> {solicitud.motivo_rechazo}
+          {solicitudActual.descripcion && (
+            <div className="mt-6 border-t pt-6">
+              <p className="text-gray-600 text-sm">Descripción</p>
+              <p className="text-gray-900 mt-2 whitespace-pre-wrap">
+                {solicitudActual.descripcion}
               </p>
             </div>
           )}
         </div>
 
-        {/* Botones de acción (solo para aprobadores) */}
+        {/* Acciones (si es aprobador y está pendiente) */}
         {puedeAprobar && (
-          <div className="bg-white rounded-lg shadow p-6 mb-6 flex gap-4">
-            <button
-              onClick={handleAprobar}
-              className="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 flex items-center justify-center gap-2"
-            >
-              <CheckCircle size={20} /> Aprobar
-            </button>
-            <button
-              onClick={() => setMostrarModalRechazo(true)}
-              className="flex-1 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 flex items-center justify-center gap-2"
-            >
-              <XCircle size={20} /> Rechazar
-            </button>
-          </div>
-        )}
-
-        {/* Modal de rechazo */}
-        {mostrarModalRechazo && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h2 className="text-xl font-bold mb-4">Motivo del rechazo</h2>
-              <textarea
-                value={motivoRechazo}
-                onChange={(e) => setMotivoRechazo(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 mb-4"
-                rows="4"
-                placeholder="Explica el motivo del rechazo"
-              />
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Acciones</h3>
+            
+            {accion === null && (
               <div className="flex gap-4">
                 <button
-                  onClick={handleRechazar}
-                  className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700"
+                  onClick={() => setAccion('aprobar')}
+                  className="flex items-center gap-2 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
                 >
-                  Rechazar
+                  <Check size={20} />
+                  Aprobar
                 </button>
                 <button
-                  onClick={() => setMostrarModalRechazo(false)}
-                  className="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg font-semibold hover:bg-gray-400"
+                  onClick={() => setAccion('rechazar')}
+                  className="flex items-center gap-2 bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition"
                 >
-                  Cancelar
+                  <X size={20} />
+                  Rechazar
                 </button>
               </div>
-            </div>
+            )}
+
+            {/* Formulario de Aprobación */}
+            {accion === 'aprobar' && (
+              <form onSubmit={handleAprobar} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Comentario (Requerido)
+                  </label>
+                  <textarea
+                    value={comentario}
+                    onChange={(e) => setComentario(e.target.value)}
+                    placeholder="Agrega un comentario antes de aprobar..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    rows="4"
+                    required
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <button
+                    type="submit"
+                    disabled={enviando}
+                    className="flex items-center gap-2 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition disabled:bg-gray-400"
+                  >
+                    <Check size={20} />
+                    {enviando ? 'Aprobando...' : 'Confirmar Aprobación'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAccion(null);
+                      setComentario('');
+                    }}
+                    className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Formulario de Rechazo */}
+            {accion === 'rechazar' && (
+              <form onSubmit={handleRechazar} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Motivo del Rechazo (Requerido)
+                  </label>
+                  <textarea
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    placeholder="Proporciona el motivo del rechazo..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    rows="4"
+                    required
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <button
+                    type="submit"
+                    disabled={enviando}
+                    className="flex items-center gap-2 bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition disabled:bg-gray-400"
+                  >
+                    <X size={20} />
+                    {enviando ? 'Rechazando...' : 'Confirmar Rechazo'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAccion(null);
+                      setMotivo('');
+                    }}
+                    className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         )}
 
-        {/* Historial */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-bold mb-4">Historial</h2>
-          <div className="space-y-4">
-            {historial.length === 0 ? (
-              <p className="text-gray-500">Sin historial</p>
-            ) : (
-              historial.map((evento) => (
-                <div key={evento.id} className="border-l-4 border-blue-600 pl-4 py-2">
-                  <p className="font-semibold text-gray-900">{evento.accion}</p>
-                  {evento.comentario && (
-                    <p className="text-gray-700 mt-1">{evento.comentario}</p>
+        {/* Historial de Cambios */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <MessageSquare size={24} />
+            Historial de Cambios
+          </h3>
+
+          {historial.length === 0 ? (
+            <p className="text-gray-600 text-center py-8">
+              No hay cambios registrados aún
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {historial.map((registro) => (
+                <div
+                  key={registro.id}
+                  className="border-l-4 border-blue-500 bg-blue-50 p-4 rounded"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-semibold text-gray-900">
+                        Estado: <Badge status={registro.estado} />
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Usuario: {registro.usuario}
+                      </p>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {new Date(registro.fecha).toLocaleString()}
+                    </p>
+                  </div>
+                  {registro.comentario && (
+                    <p className="text-gray-700 mt-2 whitespace-pre-wrap bg-white p-3 rounded">
+                      "{registro.comentario}"
+                    </p>
                   )}
-                  <p className="text-xs text-gray-500 mt-2">
-                    {new Date(evento.fecha_creacion).toLocaleString()}
-                  </p>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
-
-        {/* Comentarios */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <MessageSquare size={24} /> Comentarios
-          </h2>
-
-          <form onSubmit={handleComentario} className="mb-6">
-            <textarea
-              value={comentario}
-              onChange={(e) => setComentario(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 mb-3"
-              rows="3"
-              placeholder="Agregar un comentario..."
-            />
-            <button
-              type="submit"
-              disabled={!comentario.trim()}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
-            >
-              Comentar
-            </button>
-          </form>
-        </div>
-
-        {/* Botón volver */}
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="mt-6 bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400"
-        >
-          Volver al Dashboard
-        </button>
-      </div>
+      </main>
     </div>
   );
-};
+}

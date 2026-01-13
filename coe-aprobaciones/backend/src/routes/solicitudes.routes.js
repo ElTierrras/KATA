@@ -1,22 +1,24 @@
 import { Router } from "express";
 import { 
-  crearSolicitud, 
   listarSolicitudes, 
-  detalleSolicitud, 
-  aprobarSolicitud, 
-  rechazarSolicitud, 
-  comentarSolicitud, 
-  eliminarSolicitud 
+  obtenerSolicitud, 
+  crearSolicitud, 
+  actualizarSolicitud, 
+  eliminarSolicitud,
+  aprobarSolicitud,
+  rechazarSolicitud,
+  obtenerHistorial
 } from "../controllers/solicitudes.controllers.js";
 
 let routerSolicitudes = Router();
 
-routerSolicitudes.post('/crear-solicitud', crearSolicitud);
 routerSolicitudes.get('/solicitudes', listarSolicitudes);
-routerSolicitudes.get('/solicitudes/:id', detalleSolicitud);
+routerSolicitudes.post('/solicitudes', crearSolicitud);
+routerSolicitudes.get('/solicitudes/:id', obtenerSolicitud);
+routerSolicitudes.put('/solicitudes/:id', actualizarSolicitud);
+routerSolicitudes.delete('/solicitudes/:id', eliminarSolicitud);
 routerSolicitudes.put('/solicitudes/:id/aprobar', aprobarSolicitud);
 routerSolicitudes.put('/solicitudes/:id/rechazar', rechazarSolicitud);
-routerSolicitudes.put('/solicitudes/:id/comentar', comentarSolicitud);
-routerSolicitudes.delete('/solicitudes/:id', eliminarSolicitud);
+routerSolicitudes.get('/solicitudes/:id/historial', obtenerHistorial);
 
 export default routerSolicitudes;

@@ -1,43 +1,47 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSolicitudStore } from '../store/useSolicitudStore';
-import { useAuthStore } from '../store/useAuthStore';
-import axios from 'axios';
+import { ArrowLeft, Send } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore.js';
+import { useSolicitudStore } from '../store/useSolicitudStore.js';
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-export const CrearSolicitud = () => {
+export default function CrearSolicitud() {
+  const { usuario } = useAuthStore();
+  const { crearSolicitud, listarTipos, tipos, loading, error } = useSolicitudStore();
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const { crearSolicitud } = useSolicitudStore();
-  
-  const [tipos, setTipos] = useState([]);
-  const [usuarios, setUsuarios] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  
+
   const [formData, setFormData] = useState({
     titulo: '',
     descripcion: '',
-    responsable_id: '',
-    tipo: '',
+    tipo_solicitud: '',
+    monto: '',
   });
+  const [enviando, setEnviando] = useState(false);
+  const [errorLocal, setErrorLocal] = useState('');
+  const [tiposLoading, setTiposLoading] = useState(true);
 
+  // Redirigir si no está autenticado
   useEffect(() => {
-    const cargarDatos = async () => {
+    if (!usuario) {
+      navigate('/login');
+    }
+  }, [usuario, navigate]);
+
+  // Cargar tipos de solicitudes
+  useEffect(() => {
+    const cargarTipos = async () => {
+      setTiposLoading(true);
       try {
-        const [tiposRes, usuariosRes] = await Promise.all([
-          axios.get(`${API_URL}/tipos`),
-          axios.get(`${API_URL}/usuarios`),
-        ]);
-        setTipos(tiposRes.data);
-        setUsuarios(usuariosRes.data.filter((u) => u.id !== user?.id));
+        await listarTipos();
       } catch (err) {
-        setError('Error cargando datos');
+        console.error('Error cargando tipos:', err);
+        setErrorLocal('Error al cargar los tipos de solicitudes');
+      } finally {
+        setTiposLoading(false);
       }
     };
-    cargarDatos();
-  }, [user?.id]);
+
+    cargarTipos();
+  }, [listarTipos]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -49,114 +53,180 @@ export const CrearSolicitud = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
+    setErrorLocal('');
 
+    // Validaciones
+    if (!formData.titulo.trim()) {
+      setErrorLocal('El título es requerido');
+      return;
+    }
+    if (!formData.tipo_solicitud.trim()) {
+      setErrorLocal('Debes seleccionar un tipo de solicitud');
+      return;
+    }
+    if (!formData.monto || formData.monto <= 0) {
+      setErrorLocal('El monto debe ser mayor a 0');
+      return;
+    }
+
+    setEnviando(true);
     try {
-      await crearSolicitud({
+      console.log('📝 Creando solicitud:', formData);
+      
+      const nuevaSolicitud = await crearSolicitud({
         ...formData,
-        solicitante_id: user?.id,
+        monto: parseFloat(formData.monto),
+        solicitante_id: usuario.id,
+        estado: 'pendiente',
       });
+
+      console.log('✅ Solicitud creada:', nuevaSolicitud);
+      alert('Solicitud creada exitosamente');
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message || 'Error creando solicitud');
+      console.error('Error creando solicitud:', err);
+      setErrorLocal(err.message || 'Error al crear la solicitud');
     } finally {
-      setLoading(false);
+      setEnviando(false);
     }
   };
 
+  // Manejo seguro de tipos
+  const tiposArray = Array.isArray(tipos) ? tipos : [];
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-8">
-        <h1 className="text-3xl font-bold mb-6">Crear Nueva Solicitud</h1>
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <header className="bg-white shadow">
+        <div className="max-w-2xl mx-auto px-4 py-6">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4"
+          >
+            <ArrowLeft size={20} />
+            Volver
+          </button>
+          <h1 className="text-3xl font-bold text-gray-900">Nueva Solicitud</h1>
+        </div>
+      </header>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
+      {/* Main Content */}
+      <main className="max-w-2xl mx-auto px-4 py-8">
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          {(errorLocal || error) && (
+            <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-lg">
+              {errorLocal || error}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-semibold mb-2">Título</label>
-            <input
-              type="text"
-              name="titulo"
-              value={formData.titulo}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-              placeholder="Título de la solicitud"
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Título */}
+            <div>
+              <label htmlFor="titulo" className="block text-sm font-medium text-gray-700 mb-2">
+                Título <span className="text-red-600">*</span>
+              </label>
+              <input
+                type="text"
+                id="titulo"
+                name="titulo"
+                value={formData.titulo}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Título de la solicitud"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-semibold mb-2">Descripción</label>
-            <textarea
-              name="descripcion"
-              value={formData.descripcion}
-              onChange={handleChange}
-              required
-              rows="5"
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-              placeholder="Describe tu solicitud en detalle"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-2">Tipo de Solicitud</label>
-            <select
-              name="tipo"
-              value={formData.tipo}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-            >
-              <option value="">Selecciona un tipo</option>
-              {tipos.map((tipo) => (
-                <option key={tipo.id} value={tipo.id}>
-                  {tipo.nombre}
+            {/* Tipo de Solicitud */}
+            <div>
+              <label htmlFor="tipo_solicitud" className="block text-sm font-medium text-gray-700 mb-2">
+                Tipo de Solicitud <span className="text-red-600">*</span>
+              </label>
+              <select
+                id="tipo_solicitud"
+                name="tipo_solicitud"
+                value={formData.tipo_solicitud}
+                onChange={handleChange}
+                required
+                disabled={tiposLoading}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+              >
+                <option value="">
+                  {tiposLoading ? '⏳ Cargando tipos...' : '-- Selecciona un tipo --'}
                 </option>
-              ))}
-            </select>
-          </div>
+                {tiposArray.map((tipo) => (
+                  <option key={tipo.id} value={tipo.nombre || tipo.id}>
+                    {tipo.nombre || tipo.id}
+                  </option>
+                ))}
+              </select>
+              {tiposLoading && (
+                <p className="text-sm text-gray-600 mt-1">Cargando tipos de solicitudes...</p>
+              )}
+              {tiposArray.length === 0 && !tiposLoading && (
+                <p className="text-sm text-red-600 mt-1">No hay tipos de solicitudes disponibles</p>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-sm font-semibold mb-2">Responsable</label>
-            <select
-              name="responsable_id"
-              value={formData.responsable_id}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-            >
-              <option value="">Selecciona un responsable</option>
-              {usuarios.map((usuario) => (
-                <option key={usuario.id} value={usuario.id}>
-                  {usuario.nombre} ({usuario.rol})
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Monto */}
+            <div>
+              <label htmlFor="monto" className="block text-sm font-medium text-gray-700 mb-2">
+                Monto <span className="text-red-600">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-2 text-gray-600">$</span>
+                <input
+                  type="number"
+                  id="monto"
+                  name="monto"
+                  value={formData.monto}
+                  onChange={handleChange}
+                  required
+                  min="0"
+                  step="0.01"
+                  className="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
 
-          <div className="flex gap-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? 'Creando...' : 'Crear Solicitud'}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard')}
-              className="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg font-semibold hover:bg-gray-400"
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </div>
+            {/* Descripción */}
+            <div>
+              <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-2">
+                Descripción
+              </label>
+              <textarea
+                id="descripcion"
+                name="descripcion"
+                value={formData.descripcion}
+                onChange={handleChange}
+                rows="6"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Describe tu solicitud en detalle..."
+              />
+            </div>
+
+            {/* Botones */}
+            <div className="flex gap-4 pt-4">
+              <button
+                type="submit"
+                disabled={enviando || tiposLoading}
+                className="flex items-center justify-center gap-2 flex-1 bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
+              >
+                <Send size={20} />
+                {enviando ? 'Enviando...' : 'Enviar Solicitud'}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-semibold"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
     </div>
   );
-};
+}

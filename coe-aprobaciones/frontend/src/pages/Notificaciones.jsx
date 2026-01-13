@@ -1,65 +1,147 @@
-import { useEffect, useState } from 'react';
-import { useAuthStore } from '../store/useAuthStore';
-import { getBandejaUsuario } from '../services/notificacionService';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Trash2, Mail } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore.js';
+import { notificacionesService } from '../services/notificacionesService.js';
 
-const Notificaciones = () => {
-  const { user } = useAuthStore();
+export default function Notificaciones() {
+  const { usuario } = useAuthStore();
+  const navigate = useNavigate();
+  
   const [notificaciones, setNotificaciones] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
+  // Redirigir si no está autenticado
   useEffect(() => {
-    const cargar = async () => {
-      setLoading(true);
-      try {
-        const datos = await getBandejaUsuario(user?.id);
-        setNotificaciones(datos || []);
-      } catch (err) {
-        console.error('Error cargando notificaciones:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!usuario) {
+      navigate('/login');
+    }
+  }, [usuario, navigate]);
 
-    if (user?.id) cargar();
-  }, [user]);
+  // Cargar notificaciones
+  useEffect(() => {
+    if (usuario?.id) {
+      cargarNotificaciones();
+    }
+  }, [usuario]);
+
+  const cargarNotificaciones = async () => {
+    setLoading(true);
+    try {
+      console.log('📬 Cargando notificaciones del usuario:', usuario.id);
+      const data = await notificacionesService.obtenerBandeja(usuario.id);
+      console.log('✅ Notificaciones cargadas:', data);
+      setNotificaciones(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error cargando notificaciones:', err);
+      setError('Error al cargar las notificaciones');
+      setNotificaciones([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEliminar = async (id) => {
+    try {
+      await notificacionesService.eliminar(id);
+      setNotificaciones((prev) => prev.filter((n) => n.id !== id));
+      alert('Notificación eliminada');
+    } catch (err) {
+      alert('Error al eliminar: ' + err.message);
+    }
+  };
+
+  const handleMarcarLeida = async (id) => {
+    try {
+      await notificacionesService.marcarLeida(id);
+      cargarNotificaciones();
+    } catch (err) {
+      console.error('Error marcando como leída:', err);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
       <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-2xl font-bold">Bandeja de Notificaciones</h1>
-          <p className="text-sm text-gray-600">Listado completo de notificaciones</p>
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4"
+          >
+            <ArrowLeft size={20} />
+            Volver
+          </button>
+          <h1 className="text-3xl font-bold text-gray-900">Mis Notificaciones</h1>
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-8">
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
         {loading ? (
-          <div className="text-center py-8">Cargando...</div>
+          <div className="text-center py-8 text-gray-600">
+            Cargando notificaciones...
+          </div>
         ) : notificaciones.length === 0 ? (
-          <div className="p-8 bg-white rounded-lg shadow text-center text-gray-500">No hay notificaciones</div>
+          <div className="bg-white rounded-lg shadow p-8 text-center">
+            <Mail size={48} className="mx-auto text-gray-400 mb-4" />
+            <p className="text-gray-600">No hay notificaciones</p>
+          </div>
         ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <ul>
-              {notificaciones.map((n) => (
-                <li key={n.id} className="p-4 border-b hover:bg-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-semibold">{n.asunto}</div>
-                      <div className="text-sm text-gray-600 mt-1">{n.cuerpo}</div>
-                      <div className="text-xs text-gray-400 mt-2">{new Date(n.fecha_envio).toLocaleString()}</div>
-                    </div>
-                    <div className="ml-4">
-                      {!n.leida ? <span className="inline-block text-xs bg-red-100 text-red-700 px-2 py-1 rounded">No leída</span> : <span className="text-xs text-gray-500">Leída</span>}
-                    </div>
+          <div className="space-y-4">
+            {notificaciones.map((notificacion) => (
+              <div
+                key={notificacion.id}
+                className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {notificacion.asunto}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {new Date(notificacion.fecha_envio).toLocaleString()}
+                    </p>
                   </div>
-                </li>
-              ))}
-            </ul>
+                  {!notificacion.leida && (
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                      Nueva
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-gray-700 mt-3 whitespace-pre-wrap">
+                  {notificacion.cuerpo}
+                </p>
+
+                <div className="flex gap-2 mt-4">
+                  {!notificacion.leida && (
+                    <button
+                      onClick={() => handleMarcarLeida(notificacion.id)}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Marcar como leída
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleEliminar(notificacion.id)}
+                    className="ml-auto text-red-600 hover:text-red-800 transition"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </main>
     </div>
   );
-};
-
-export default Notificaciones;
+}

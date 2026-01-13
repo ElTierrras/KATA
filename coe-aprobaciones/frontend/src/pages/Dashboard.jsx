@@ -1,126 +1,174 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSolicitudStore } from '../store/useSolicitudStore';
-import { useAuthStore } from '../store/useAuthStore';
-import { Badge } from '../components/Badge';
-import { NotificationBell } from '../components/NotificationBell';
-import { Plus, Eye } from 'lucide-react';
+import { LogOut, Plus, Eye } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore.js';
+import { useSolicitudStore } from '../store/useSolicitudStore.js';
+import Badge from '../components/Badge.jsx';
 
-export const Dashboard = () => {
+export default function Dashboard() {
+  const { usuario, logout } = useAuthStore();
+  const { solicitudes, listarSolicitudes, loading, error } = useSolicitudStore();
+  const [filter, setFilter] = useState('todas');
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const { solicitudes, loading, fetchSolicitudes } = useSolicitudStore();
-  const [filtro, setFiltro] = useState('todas');
 
+  // Cargar solicitudes al montar el componente
   useEffect(() => {
-    fetchSolicitudes();
-  }, []);
+    if (usuario) {
+      console.log('📋 Cargando solicitudes del usuario:', usuario.id);
+      listarSolicitudes();
+    }
+  }, [usuario, listarSolicitudes]);
 
-  const solicitudesFiltradas = solicitudes.filter((s) => {
-    if (filtro === 'pendientes') return s.estado === 'pendiente';
-    if (filtro === 'aprobadas') return s.estado === 'aprobada';
-    if (filtro === 'rechazadas') return s.estado === 'rechazada';
-    return true;
+  // Redirigir si no está autenticado
+  useEffect(() => {
+    if (!usuario) {
+      navigate('/login');
+    }
+  }, [usuario, navigate]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const handleCrearSolicitud = () => {
+    navigate('/crear-solicitud');
+  };
+
+  const handleVerDetalle = (id) => {
+    navigate(`/solicitudes/${id}`);
+  };
+
+  // Filtrar solicitudes según el estado
+  const solicitudesFiltradas = solicitudes.filter((solicitud) => {
+    if (filter === 'todas') return true;
+    return solicitud.estado === filter;
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600">Bienvenido, {user?.nombre}</p>
+            <p className="text-gray-600 mt-1">Bienvenido, {usuario?.nombre}</p>
           </div>
-          <div className="flex items-center gap-4">
-            {user?.id && <NotificationBell usuarioId={user.id} />}
-            <button
-              onClick={() => navigate('/notificaciones')}
-              className="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200"
-            >
-              Bandeja
-            </button>
-            <button
-              onClick={() => navigate('/crear-solicitud')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
-            >
-              <Plus size={20} /> Nueva Solicitud
-            </button>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+          >
+            <LogOut size={20} />
+            Cerrar Sesión
+          </button>
         </div>
       </header>
 
-      {/* Contenido */}
+      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Filtros */}
+        {/* Error Display */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {/* Actions */}
         <div className="mb-6 flex gap-4">
-          {['todas', 'pendientes', 'aprobadas', 'rechazadas'].map((f) => (
+          <button
+            onClick={handleCrearSolicitud}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus size={20} />
+            Nueva Solicitud
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div className="mb-6 flex gap-2">
+          {['todas', 'pendiente', 'aprobada', 'rechazada'].map((estado) => (
             <button
-              key={f}
-              onClick={() => setFiltro(f)}
-              className={`px-4 py-2 rounded-lg font-semibold transition ${
-                filtro === f
+              key={estado}
+              onClick={() => setFilter(estado)}
+              className={`px-4 py-2 rounded-lg transition ${
+                filter === estado
                   ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 border hover:bg-gray-100'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
+              {estado.charAt(0).toUpperCase() + estado.slice(1)}
             </button>
           ))}
         </div>
 
-        {/* Tabla de solicitudes */}
-        {loading ? (
-          <div className="text-center py-8">Cargando...</div>
-        ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+        {/* Solicitudes Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center text-gray-600">
+              Cargando solicitudes...
+            </div>
+          ) : solicitudesFiltradas.length === 0 ? (
+            <div className="p-8 text-center text-gray-600">
+              No hay solicitudes para mostrar
+            </div>
+          ) : (
             <table className="w-full">
-              <thead className="bg-gray-100 border-b">
+              <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Título</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Solicitante</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Estado</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Fecha</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Acciones</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Tipo
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Estado
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Monto
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Fecha
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
-              <tbody>
-                {solicitudesFiltradas.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
-                      No hay solicitudes
+              <tbody className="divide-y">
+                {solicitudesFiltradas.map((solicitud) => (
+                  <tr key={solicitud.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {solicitud.id.slice(0, 8)}...
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {solicitud.tipo_solicitud}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <Badge status={solicitud.estado} />
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      ${solicitud.monto?.toLocaleString() || '0'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {new Date(solicitud.fecha_creacion).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <button
+                        onClick={() => handleVerDetalle(solicitud.id)}
+                        className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition"
+                      >
+                        <Eye size={18} />
+                        Ver
+                      </button>
                     </td>
                   </tr>
-                ) : (
-                  solicitudesFiltradas.map((solicitud) => (
-                    <tr key={solicitud.id} className="border-b hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-gray-900">{solicitud.titulo}</div>
-                        <div className="text-sm text-gray-500">{solicitud.descripcion.substring(0, 50)}...</div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{solicitud.solicitante_id}</td>
-                      <td className="px-6 py-4">
-                        <Badge estado={solicitud.estado} />
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {new Date(solicitud.fecha_creacion).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => navigate(`/solicitud/${solicitud.id}`)}
-                          className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                        >
-                          <Eye size={18} /> Ver
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
-          </div>
-        )}
+          )}
+        </div>
       </main>
     </div>
   );
-};
+}

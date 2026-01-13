@@ -1,97 +1,132 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import { solicitudesService } from '../services/solicitudesService.js';
+import { tiposService } from '../services/tiposService.js';
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-export const useSolicitudStore = create((set, get) => ({
+export const useSolicitudStore = create((set) => ({
   solicitudes: [],
+  tipos: [], // ✅ Inicializar como array vacío
+  solicitudActual: null,
+  historial: [],
   loading: false,
   error: null,
 
-  // Obtener todas las solicitudes
-  fetchSolicitudes: async () => {
-    set({ loading: true });
+  listarSolicitudes: async () => {
+    console.log('📞 Llamando listarSolicitudes del store');
+    set({ loading: true, error: null });
     try {
-      const response = await axios.get(`${API_URL}/solicitudes`);
-      set({ solicitudes: response.data, error: null });
+      const data = await solicitudesService.listar();
+      console.log('✅ Solicitudes cargadas:', data);
+      set({ solicitudes: data || [], loading: false });
+      return data;
     } catch (error) {
-      set({ error: error.message });
-    } finally {
-      set({ loading: false });
-    }
-  },
-
-  // Obtener detalle de una solicitud
-  fetchDetalleSolicitud: async (id) => {
-    try {
-      const response = await axios.get(`${API_URL}/solicitudes/${id}`);
-      return response.data;
-    } catch (error) {
-      set({ error: error.message });
+      console.error('❌ Error cargando solicitudes:', error.message);
+      set({ error: error.message, loading: false });
       throw error;
     }
   },
 
-  // Crear nueva solicitud
-  crearSolicitud: async (solicitudData) => {
+  // ✅ Listar tipos
+  listarTipos: async () => {
+    console.log('📞 Cargando tipos de solicitudes');
+    set({ loading: true, error: null });
     try {
-      const response = await axios.post(`${API_URL}/solicitudes`, solicitudData);
+      const data = await tiposService.listar();
+      console.log('✅ Tipos cargados:', data);
+      set({ tipos: data || [], loading: false });
+      return data;
+    } catch (error) {
+      console.error('❌ Error cargando tipos:', error.message);
+      set({ tipos: [], loading: false });
+      // No lanzar error, solo registrar
+      return [];
+    }
+  },
+
+  obtenerSolicitud: async (id) => {
+    console.log('📞 Obteniendo solicitud:', id);
+    set({ loading: true, error: null });
+    try {
+      const data = await solicitudesService.obtenerPorId(id);
+      console.log('✅ Solicitud obtenida:', data);
+      set({ solicitudActual: data, loading: false });
+      return data;
+    } catch (error) {
+      console.error('❌ Error obteniendo solicitud:', error.message);
+      set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
+
+  crearSolicitud: async (solicitud) => {
+    console.log('📝 Creando solicitud:', solicitud);
+    set({ loading: true, error: null });
+    try {
+      const data = await solicitudesService.crear(solicitud);
+      console.log('✅ Solicitud creada:', data);
       set((state) => ({
-        solicitudes: [...state.solicitudes, response.data],
-        error: null,
+        solicitudes: [...state.solicitudes, data],
+        loading: false,
       }));
-      return response.data;
+      return data;
     } catch (error) {
-      set({ error: error.message });
+      console.error('❌ Error creando solicitud:', error.message);
+      set({ error: error.message, loading: false });
       throw error;
     }
   },
 
-  // Aprobar solicitud
-  aprobarSolicitud: async (id) => {
+  aprobarSolicitud: async (id, comentario) => {
+    console.log('✅ Aprobando solicitud:', id);
+    set({ loading: true, error: null });
     try {
-      const response = await axios.put(`${API_URL}/solicitudes/${id}/aprobar`);
+      const data = await solicitudesService.aprobar(id, comentario);
+      console.log('✅ Solicitud aprobada:', data);
       set((state) => ({
-        solicitudes: state.solicitudes.map((s) =>
-          s.id === id ? { ...s, estado: 'aprobada' } : s
-        ),
+        solicitudes: state.solicitudes.map((s) => s.id === id ? data : s),
+        solicitudActual: data,
+        loading: false,
       }));
-      return response.data;
+      return data;
     } catch (error) {
-      set({ error: error.message });
+      console.error('❌ Error aprobando:', error.message);
+      set({ error: error.message, loading: false });
       throw error;
     }
   },
 
-  // Rechazar solicitud
   rechazarSolicitud: async (id, motivo) => {
+    console.log('❌ Rechazando solicitud:', id);
+    set({ loading: true, error: null });
     try {
-      const response = await axios.put(`${API_URL}/solicitudes/${id}/rechazar`, {
-        motivo,
-      });
+      const data = await solicitudesService.rechazar(id, motivo);
+      console.log('❌ Solicitud rechazada:', data);
       set((state) => ({
-        solicitudes: state.solicitudes.map((s) =>
-          s.id === id ? { ...s, estado: 'rechazada' } : s
-        ),
+        solicitudes: state.solicitudes.map((s) => s.id === id ? data : s),
+        solicitudActual: data,
+        loading: false,
       }));
-      return response.data;
+      return data;
     } catch (error) {
-      set({ error: error.message });
+      console.error('❌ Error rechazando:', error.message);
+      set({ error: error.message, loading: false });
       throw error;
     }
   },
 
-  // Agregar comentario
-  agregarComentario: async (solicitudId, comentario, usuarioId) => {
+  obtenerHistorial: async (id) => {
+    console.log('📜 Obteniendo historial:', id);
+    set({ loading: true, error: null });
     try {
-      const response = await axios.put(
-        `${API_URL}/solicitudes/${solicitudId}/comentar`,
-        { comentario, usuario_id: usuarioId }
-      );
-      return response.data;
+      const data = await solicitudesService.obtenerHistorial(id);
+      console.log('✅ Historial obtenido:', data);
+      set({ historial: data || [], loading: false });
+      return data;
     } catch (error) {
-      set({ error: error.message });
-      throw error;
+      console.error('❌ Error obteniendo historial:', error.message);
+      set({ historial: [], loading: false });
+      return [];
     }
   },
+
+  limpiarError: () => set({ error: null }),
 }));

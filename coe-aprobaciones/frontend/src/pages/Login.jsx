@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuthStore } from '../store/useAuthStore';
-import { Mail, Lock, LogIn } from 'lucide-react';
+import { LogIn, Mail, Lock } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore.js';
 
-export const Login = () => {
-  const navigate = useNavigate();
-  const { setUser } = useAuthStore();
+export default function Login() {
   const [formData, setFormData] = useState({
     correo: '',
     contraseña: '',
   });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { login, loading } = useAuthStore();
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,32 +22,14 @@ export const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
     try {
-      // TODO: Reemplazar con llamada real a tu API backend
-      // const response = await fetch('/api/auth/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData),
-      // });
-      // const data = await response.json();
-
-      // Simulación temporal
-      const userData = {
-        id: 1,
-        correo: formData.correo,
-        nombre: formData.correo.split('@')[0],
-      };
-
-      setUser(userData);
+      await login(formData.correo, formData.contraseña);
       navigate('/dashboard');
     } catch (err) {
-      setError('Error al iniciar sesión. Verifica tus credenciales.');
+      setError(err.message || 'Error al iniciar sesión. Verifica tus credenciales.');
       console.error('Error de login:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -130,5 +111,3 @@ export const Login = () => {
     </div>
   );
 };
-
-export default Login;

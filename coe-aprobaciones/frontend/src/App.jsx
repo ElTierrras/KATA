@@ -18,7 +18,6 @@ export default function App() {
         <Route path="/solicitudes/:id" element={<DetalleSolicitud />} />
         <Route path="/crear-solicitud" element={<CrearSolicitud />} />
         <Route path="/notificaciones" element={<Notificaciones />} />
-        {/* Redirigir a login por defecto */}
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>

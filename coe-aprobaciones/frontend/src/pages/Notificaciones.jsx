@@ -12,14 +12,12 @@ export default function Notificaciones() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Redirigir si no está autenticado
   useEffect(() => {
     if (!usuario) {
       navigate('/login');
     }
   }, [usuario, navigate]);
 
-  // Cargar notificaciones
   useEffect(() => {
     if (usuario?.id) {
       cargarNotificaciones();

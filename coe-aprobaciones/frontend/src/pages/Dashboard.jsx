@@ -11,7 +11,6 @@ export default function Dashboard() {
   const [filter, setFilter] = useState('todas');
   const navigate = useNavigate();
 
-  // Cargar solicitudes al montar el componente
   useEffect(() => {
     if (usuario) {
       console.log('📋 Cargando solicitudes del usuario:', usuario.id);
@@ -19,7 +18,6 @@ export default function Dashboard() {
     }
   }, [usuario, listarSolicitudes]);
 
-  // Redirigir si no está autenticado
   useEffect(() => {
     if (!usuario) {
       navigate('/login');
@@ -39,13 +37,11 @@ export default function Dashboard() {
     navigate(`/solicitudes/${id}`);
   };
 
-  // Filtrar solicitudes según el estado
   const solicitudesFiltradas = solicitudes.filter((solicitud) => {
     if (filter === 'todas') return true;
     return solicitud.estado === filter;
   });
 
-  // Solicitudes pendientes que requieren mi aprobación
   const solicitudesPendientes = solicitudes.filter(
     (solicitud) => 
       solicitud.estado === 'pendiente' && 

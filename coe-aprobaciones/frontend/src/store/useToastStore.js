@@ -9,12 +9,12 @@ export const useToastStore = create((set) => ({
       toasts: [...state.toasts, { id, message, type, duration }]
     }));
 
-    // Auto-remove after duration
+    
     setTimeout(() => {
       set((state) => ({
         toasts: state.toasts.filter((toast) => toast.id !== id)
       }));
-    }, duration + 300); // Add 300ms for animation
+    }, duration + 300); 
   },
 
   removeToast: (id) => {

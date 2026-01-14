@@ -17,7 +17,7 @@ export const NotificationBell = ({ usuarioId }) => {
     };
 
     cargarNotificaciones();
-    // Recargar cada 30 segundos
+    
     const intervalo = setInterval(cargarNotificaciones, 30000);
     return () => clearInterval(intervalo);
   }, [usuarioId]);

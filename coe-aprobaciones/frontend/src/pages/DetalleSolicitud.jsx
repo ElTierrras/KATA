@@ -15,11 +15,10 @@ export default function DetalleSolicitud() {
   
   const [comentario, setComentario] = useState('');
   const [motivo, setMotivo] = useState('');
-  const [accion, setAccion] = useState(null); // 'aprobar', 'rechazar', null
+  const [accion, setAccion] = useState(null); 
   const [enviando, setEnviando] = useState(false);
   const [historial, setHistorial] = useState([]);
 
-  // Cargar solicitud y historial al montar
   useEffect(() => {
     if (id) {
       console.log('📄 Cargando solicitud:', id);
@@ -27,17 +26,13 @@ export default function DetalleSolicitud() {
         console.error('Error cargando solicitud:', err);
       });
       
-      // Cargar historial (temporal - después lo conectaremos con el backend)
       cargarHistorial(id);
     }
   }, [id, obtenerSolicitud]);
 
   const cargarHistorial = async (solicitudId) => {
     try {
-      // TODO: Reemplazar con llamada real cuando se implemente el servicio de historial
       console.log('📜 Cargando historial de:', solicitudId);
-      // const data = await historialService.obtenerPorSolicitud(solicitudId);
-      // setHistorial(data);
     } catch (error) {
       console.error('Error cargando historial:', error);
     }
@@ -55,7 +50,6 @@ export default function DetalleSolicitud() {
       console.log('✅ Aprobando solicitud:', id);
       await aprobarSolicitud(id, comentario, usuario.id);
       
-      // Agregar al historial local
       agregarAlHistorial('aprobada', comentario);
       
       setComentario('');
@@ -82,7 +76,6 @@ export default function DetalleSolicitud() {
       console.log('❌ Rechazando solicitud:', id);
       await rechazarSolicitud(id, motivo, usuario.id);
       
-      // Agregar al historial local
       agregarAlHistorial('rechazada', motivo);
       
       setMotivo('');

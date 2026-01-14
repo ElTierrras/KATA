@@ -1,7 +1,6 @@
 import pool from '../db.js';
 import nodemailer from 'nodemailer';
 
-// Configurar el transportador de correo
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -14,20 +13,17 @@ export let enviarCorreo = async (req, res) => {
   const { destinatario, asunto, cuerpo, solicitud_id, usuario_id } = req.body;
 
   try {
-    // Validación de campos requeridos
     if (!destinatario || !asunto || !cuerpo || !usuario_id) {
       return res.status(400).json({ 
         message: 'Campos requeridos: destinatario, asunto, cuerpo, usuario_id' 
       });
     }
 
-    // Validación de formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(destinatario)) {
       return res.status(400).json({ message: 'Formato de correo inválido' });
     }
 
-    // Enviar correo
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: destinatario,
@@ -35,7 +31,6 @@ export let enviarCorreo = async (req, res) => {
       html: cuerpo
     });
 
-    // Guardar notificación en base de datos
     const result = await pool.query(
       'INSERT INTO notificaciones (usuario_id, solicitud_id, asunto, cuerpo, fecha_envio) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
       [usuario_id, solicitud_id || null, asunto, cuerpo]

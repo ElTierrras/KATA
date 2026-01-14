@@ -21,7 +21,6 @@ export let listarSolicitudes = async (req, res) => {
       ORDER BY s.fecha_creacion DESC
     `);
     
-    // Transformar resultado para enviar datos anidados
     const solicitudes = result.rows.map(row => ({
       id: row.id,
       titulo: row.titulo,
@@ -116,15 +115,12 @@ export let crearSolicitud = async (req, res) => {
       });
     }
 
-    // Crear la solicitud
     const result = await pool.query(
       'INSERT INTO solicitudes (titulo, descripcion, solicitante_id, responsable_id, tipo, estado) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
       [titulo, descripcion, solicitante_id, responsable_id, tipo, 'pendiente']
     );
     
     const solicitud = result.rows[0];
-
-    // Obtener datos del responsable para enviarle correo
     try {
       const responsableResult = await pool.query(
         'SELECT nombre, correo FROM usuarios WHERE id = $1',
@@ -140,7 +136,7 @@ export let crearSolicitud = async (req, res) => {
         const responsable = responsableResult.rows[0];
         const solicitante = solicitanteResult.rows[0];
 
-        // Enviar correo al responsable
+        
         await enviarNotificacionNuevaSolicitud(
           responsable.correo,
           responsable.nombre,
@@ -153,7 +149,7 @@ export let crearSolicitud = async (req, res) => {
       }
     } catch (emailError) {
       console.error('⚠️ Error enviando correo de notificación:', emailError.message);
-      // No fallar la solicitud si no se puede enviar el correo
+      
     }
     
     res.status(201).json(solicitud);
@@ -213,7 +209,7 @@ export let aprobarSolicitud = async (req, res) => {
       return res.status(400).json({ message: 'El usuario_id es requerido' });
     }
 
-    // Obtener datos de la solicitud antes de actualizar
+    
     const solicitudAnterior = await pool.query(
       'SELECT s.titulo, s.solicitante_id, u.nombre as solicitante_nombre, u.correo as solicitante_correo FROM solicitudes s LEFT JOIN usuarios u ON s.solicitante_id = u.id WHERE s.id = $1',
       [id]
@@ -223,13 +219,13 @@ export let aprobarSolicitud = async (req, res) => {
       return res.status(404).json({ message: 'Solicitud no encontrada' });
     }
 
-    // Obtener datos del responsable
+    
     const responsableResult = await pool.query(
       'SELECT nombre FROM usuarios WHERE id = $1',
       [usuario_id]
     );
 
-    // Actualizar solicitud a aprobada
+    
     const solicitudResult = await pool.query(
       'UPDATE solicitudes SET estado = $1, fecha_aprobacion = NOW() WHERE id = $2 RETURNING *',
       ['aprobada', id]
@@ -239,13 +235,13 @@ export let aprobarSolicitud = async (req, res) => {
       return res.status(404).json({ message: 'Solicitud no encontrada' });
     }
 
-    // Guardar en historial
+    
     await pool.query(
       'INSERT INTO historial (solicitud_id, usuario_id, accion, comentario) VALUES ($1, $2, $3, $4)',
       [id, usuario_id, 'aprobar', comentario]
     );
 
-    // Enviar correo al solicitante
+    
     try {
       const solicitante = solicitudAnterior.rows[0];
       const responsable = responsableResult.rows[0] || { nombre: 'Responsable' };
@@ -262,7 +258,7 @@ export let aprobarSolicitud = async (req, res) => {
       }
     } catch (emailError) {
       console.error('⚠️ Error enviando correo de aprobación:', emailError.message);
-      // No fallar la aprobación si no se puede enviar el correo
+      
     }
 
     res.json(solicitudResult.rows[0]);
@@ -285,7 +281,7 @@ export let rechazarSolicitud = async (req, res) => {
       return res.status(400).json({ message: 'El usuario_id es requerido' });
     }
 
-    // Obtener datos de la solicitud antes de actualizar
+    
     const solicitudAnterior = await pool.query(
       'SELECT s.titulo, s.solicitante_id, u.nombre as solicitante_nombre, u.correo as solicitante_correo FROM solicitudes s LEFT JOIN usuarios u ON s.solicitante_id = u.id WHERE s.id = $1',
       [id]
@@ -295,13 +291,13 @@ export let rechazarSolicitud = async (req, res) => {
       return res.status(404).json({ message: 'Solicitud no encontrada' });
     }
 
-    // Obtener datos del responsable
+    
     const responsableResult = await pool.query(
       'SELECT nombre FROM usuarios WHERE id = $1',
       [usuario_id]
     );
 
-    // Actualizar solicitud a rechazada
+    
     const solicitudResult = await pool.query(
       'UPDATE solicitudes SET estado = $1, fecha_rechazo = NOW(), motivo_rechazo = $3 WHERE id = $2 RETURNING *',
       ['rechazada', id, motivo_rechazo]
@@ -311,13 +307,13 @@ export let rechazarSolicitud = async (req, res) => {
       return res.status(404).json({ message: 'Solicitud no encontrada' });
     }
 
-    // Guardar en historial
+    
     await pool.query(
       'INSERT INTO historial (solicitud_id, usuario_id, accion, comentario) VALUES ($1, $2, $3, $4)',
       [id, usuario_id, 'rechazar', motivo_rechazo]
     );
 
-    // Enviar correo al solicitante
+    
     try {
       const solicitante = solicitudAnterior.rows[0];
       const responsable = responsableResult.rows[0] || { nombre: 'Responsable' };
@@ -334,7 +330,7 @@ export let rechazarSolicitud = async (req, res) => {
       }
     } catch (emailError) {
       console.error('⚠️ Error enviando correo de rechazo:', emailError.message);
-      // No fallar el rechazo si no se puede enviar el correo
+      
     }
 
     res.json(solicitudResult.rows[0]);

@@ -4,7 +4,7 @@ import { tiposService } from '../services/tiposService.js';
 
 export const useSolicitudStore = create((set) => ({
   solicitudes: [],
-  tipos: [], // ✅ Inicializar como array vacío
+  tipos: [],
   solicitudActual: null,
   historial: [],
   loading: false,
@@ -25,7 +25,6 @@ export const useSolicitudStore = create((set) => ({
     }
   },
 
-  // ✅ Listar tipos
   listarTipos: async () => {
     console.log('📞 Cargando tipos de solicitudes');
     set({ loading: true, error: null });
@@ -37,7 +36,6 @@ export const useSolicitudStore = create((set) => ({
     } catch (error) {
       console.error('❌ Error cargando tipos:', error.message);
       set({ tipos: [], loading: false });
-      // No lanzar error, solo registrar
       return [];
     }
   },

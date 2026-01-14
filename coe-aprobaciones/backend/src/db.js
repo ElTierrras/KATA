@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Valida que la contraseña sea un string
 const password = process.env.DB_PASSWORD;
 if (!password || typeof password !== 'string') {
   throw new Error('DB_PASSWORD debe estar definido en .env y ser un string');

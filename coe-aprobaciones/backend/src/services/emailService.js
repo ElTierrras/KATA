@@ -1,7 +1,6 @@
 import nodemailer from 'nodemailer';
 import pool from '../db.js';
 
-// Configurar el transportador de correo
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -10,14 +9,6 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-/**
- * Envía un correo de notificación cuando se crea una solicitud
- * @param {string} destinatario - Email del responsable
- * @param {string} nombreResponsable - Nombre del responsable
- * @param {string} titulo - Título de la solicitud
- * @param {string} nombreSolicitante - Nombre del solicitante
- * @param {string} solicitudId - ID de la solicitud
- */
 export const enviarNotificacionNuevaSolicitud = async (
   destinatario,
   nombreResponsable,
@@ -62,9 +53,6 @@ export const enviarNotificacionNuevaSolicitud = async (
   }
 };
 
-/**
- * Envía un correo cuando una solicitud es aprobada
- */
 export const enviarNotificacionAprobada = async (
   destinatario,
   nombreSolicitante,
@@ -107,9 +95,6 @@ export const enviarNotificacionAprobada = async (
   }
 };
 
-/**
- * Envía un correo cuando una solicitud es rechazada
- */
 export const enviarNotificacionRechazada = async (
   destinatario,
   nombreSolicitante,

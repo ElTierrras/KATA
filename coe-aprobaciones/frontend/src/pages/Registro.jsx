@@ -27,7 +27,7 @@ export default function Registro() {
     e.preventDefault();
     setError('');
 
-    // Validaciones
+    
     if (!formData.nombre.trim()) {
       setError('El nombre es requerido');
       return;

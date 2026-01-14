@@ -26,12 +26,10 @@ export default function CrearSolicitud() {
   const [tiposLoading, setTiposLoading] = useState(true);
   const [usuariosLoading, setUsuariosLoading] = useState(true);
 
-  // Redirigir si no está autenticado
   useEffect(() => {
     if (!usuario) {
       navigate('/login');
     } else {
-      // Establecer automáticamente el solicitante como usuario actual
       setFormData((prev) => ({
         ...prev,
         solicitante_id: usuario.id,
@@ -39,16 +37,13 @@ export default function CrearSolicitud() {
     }
   }, [usuario, navigate]);
 
-  // Cargar tipos de solicitudes y usuarios
   useEffect(() => {
     const cargarDatos = async () => {
       setTiposLoading(true);
       setUsuariosLoading(true);
       try {
-        // Cargar tipos
         await listarTipos();
 
-        // Cargar usuarios
         const usuariosData = await usuariosService.listar();
         setUsuarios(Array.isArray(usuariosData) ? usuariosData : []);
       } catch (err) {
@@ -75,7 +70,7 @@ export default function CrearSolicitud() {
     e.preventDefault();
     setErrorLocal('');
 
-    // Validaciones
+    
     if (!formData.titulo.trim()) {
       setErrorLocal('El título es requerido');
       return;
@@ -113,7 +108,6 @@ export default function CrearSolicitud() {
     }
   };
 
-  // Manejo seguro de datos
   const tiposArray = Array.isArray(tipos) ? tipos : [];
   const usuariosArray = Array.isArray(usuarios) ? usuarios : [];
   const responsablesArray = usuariosArray.filter(
